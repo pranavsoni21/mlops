@@ -1,0 +1,4 @@
+[core]
+    remote = stuedentremote
+['remote "stuedentremote"']
+    url = s3://mlops-pranav-dvc-bucket
