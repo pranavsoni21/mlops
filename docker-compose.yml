@@ -1,0 +1,82 @@
+services:
+    mlflow:
+        container_name: mlflow-container
+        image: ghcr.io/mlflow/mlflow
+        environment:
+            MLFLOW_S3_ENDPOINT_URL: "http://minio:9000"
+            AWS_DEFAULT_REGION: "us-east-1"
+            AWS_SECRET_ACCESS_KEY: "minioadmin"
+            AWS_ACCESS_KEY_ID: "minioadmin"
+        ports: 
+            - "5000:5000"
+        volumes:
+            - "mlflow_data:/mlflow"
+
+        command: >
+              sh -c "pip install boto3 &&
+              mlflow server
+              --host 0.0.0.0
+              --port 5000
+              --backend-store-uri sqlite:////mlflow/mlflow.db
+              --artifacts-destination s3://mlflow
+              --cors-allowed-origins '*'
+              --allowed-hosts 'mlflow:5000,localhost:5000,172.31.132.75:5000'"   
+        networks:
+            - mlops_network
+        depends_on:
+              minio:
+                condition: service_healthy
+
+
+
+    minio:
+        container_name: minio-container
+        image: elestio/minio:latest
+        command: server /data --address ":9000" --console-address ":9001"
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+        environment:
+            MINIO_ROOT_USER: "minioadmin"
+            MINIO_ROOT_PASSWORD: "minioadmin"
+
+        healthcheck:
+              test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+              interval: 10s
+              timeout: 5s
+              retries: 5
+
+        volumes:
+            - "minio_data:/data"
+        networks:
+            - mlops_network
+
+    fast-api:
+        container_name: fastapi-container
+        
+        build:
+            context: .
+            dockerfile: Dockerfile
+
+        ports:
+            - "8000:8000"
+
+        environment:
+              MLFLOW_TRACKING_URI: http://mlflow:5000
+
+        networks:
+            - mlops_network
+
+        depends_on:
+            - mlflow
+
+volumes:
+    mlflow_data:
+    minio_data:
+    
+
+networks:
+    mlops_network:
+        driver: bridge
+
+    
