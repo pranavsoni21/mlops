@@ -7,3 +7,4 @@ boto3
 awscli
 dvc
 dvc_s3
+pytest
