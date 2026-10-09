@@ -4,3 +4,6 @@ mlflow
 scikit-learn
 pandas
 boto3
+awscli
+dvc
+dvc_s3
