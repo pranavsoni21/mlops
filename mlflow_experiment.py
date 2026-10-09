@@ -1,4 +1,4 @@
-
+import os
 import pandas as pd
 import mlflow
 import mlflow.sklearn
@@ -9,7 +9,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
-mlflow.set_tracking_uri("http://localhost:5000")
+
+mlflow.set_tracking_uri(
+    os.getenv('MLFLOW_SERVER_URL')
+)
 
 # -----------------------------
 # 1. Load data
