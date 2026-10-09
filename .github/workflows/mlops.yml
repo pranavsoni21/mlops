@@ -1,0 +1,79 @@
+name: CI/CD pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    outputs:
+      run_id: ${{ steps.train.outputs.best_run_id }}
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v6.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -v tests/test_model.py
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          aws-region: "ap-south-1"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Retrieve DVC data
+        run: dvc pull
+
+      - name: Train and evaluate model
+        id: train
+        env: 
+          MLFLOW_SERVER_URL: ${{ secrets.MLFLOW_SERVER_URL }}
+        run: python train.py
+  
+  cd:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    needs: ci
+    steps:
+      - name: Chekcout the repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v6.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Register and Promote approved version to @champion alias
+        env: 
+          MLFLOW_SERVER_URL: ${{ secrets.MLFLOW_SERVER_URL }}
+          MODEL_RUN_ID: ${{ needs.ci.outputs.run_id }}
+        run: python register.py --run-id "$MODEL_RUN_ID" --promote
+
+      
+    
+        
+          
