@@ -86,7 +86,7 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_IP }}
-          user: 'ubuntu'
+          username: 'ubuntu'
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: IMAGE, REGISTRY
           script: |
