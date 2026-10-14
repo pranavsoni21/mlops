@@ -100,7 +100,7 @@ jobs:
             docker compose up -d --no-deps fast-api
 
             # Smoke test
-            sleep 5
+            sleep 30
             curl --fail http://localhost:8000/
     
           
