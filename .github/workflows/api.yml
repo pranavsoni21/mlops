@@ -16,6 +16,11 @@ on:
 jobs:
   ci: 
     runs-on: ubuntu-latest
+
+    outputs:
+      image: ${{ steps.ecr-push.outputs.image_name }}
+      registry: ${{ steps.ecr-push.outputs.ecr_registry }}
+      
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -47,6 +52,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2    
 
       - name: Tag and push image to ECR
+        id: ecr-push
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
@@ -54,12 +60,49 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           
         run: |
+          IMAGE_URI="${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}"
+          
           docker tag \
           student-prediction-api:${IMAGE_TAG} \
           ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
           
           docker push ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
 
-      
+          echo "image_name=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+          echo "ecr_registry=${REGISTRY}" >> "$GITHUB_OUTPUT" 
+
+  cd:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: ci
+    environment: production
+    
+    steps:
+      - name: SSH into VM
+        env:
+          IMAGE: ${{ needs.ci.outputs.image }}
+          REGISTRY: ${{ needs.ci.outputs.registry }}
+          
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_IP }}
+          user: 'ubuntu'
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: IMAGE, REGISTRY
+          script: |
+            cd ~/mlops/
+            aws ecr get-login-password --region ap-south-1 \
+            | docker login --username AWS --password-stdin ${REGISTRY}
+
+            # Pull image and run container
+            export FASTAPI_IMAGE=${IMAGE}
+            docker compose pull fast-api
+            docker compose up -d --no-deps fast-api
+
+            # Smoke test
+            sleep 5
+            curl --fail http://localhost:8000/
+    
+          
 
         
