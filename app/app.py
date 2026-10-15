@@ -5,6 +5,7 @@ import os
 import logging
 import json
 
+from mlflow.tracking import MlflowClient
 from datetime import datetime, timezone
 from fastapi import FastAPI
 from pydantic import BaseModel
