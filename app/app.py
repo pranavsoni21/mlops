@@ -21,8 +21,20 @@ mlflow.set_tracking_uri(
     os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
 )
 
+MODEL_NAME = "StudentPassPredictor"
+MODEL_ALIAS = "champion"
+
+client = MlflowClient()
+
+model_version = client.get_model_version_by_alias(
+    MODEL_NAME,
+    MODEL_ALIAS
+)
+
+MODEL_VERSION = model_version.version
+
 model = mlflow.sklearn.load_model(
-    "models:/StudentPassPredictor@champion"
+    f"models:/{MODEL_NAME}/{MODEL_VERSION}"
 )
 
 
@@ -53,8 +65,9 @@ def predict(student: Student):
     log_entry = {
         "event": "prediction",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "model_name": "StudentPassPredictor",
-        "model_alias": "champion",
+        "model_name": MODEL_NAME,
+        "model_alias": MODEL_ALIAS,
+        "model_version": MODEL_VERSION,
         "features": data.iloc[0].to_dict(),
         "prediction": prediction,
         "result": result
