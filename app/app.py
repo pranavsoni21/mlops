@@ -2,13 +2,18 @@ import mlflow
 import mlflow.sklearn
 import pandas as pd
 import os
+import logging
+import json
 
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 
 
 app = FastAPI(title="Student Pass Prediction API")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("prediction-api")
 
 
 # Load the model from MLflow
@@ -35,7 +40,6 @@ def root():
 
 @app.post("/predict")
 def predict(student: Student):
-
     data = pd.DataFrame([{
         "hours_studied": student.hours_studied,
         "attendance": student.attendance,
@@ -43,9 +47,22 @@ def predict(student: Student):
         "sleep_hours": student.sleep_hours
     }])
 
-    prediction = model.predict(data)[0]
+    prediction = int(model.predict(data)[0])
+    result = "PASS" if prediction == 1 else "FAIL"
+
+    log_entry = {
+        "event": "prediction",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "model_name": "StudentPassPredictor",
+        "model_alias": "champion",
+        "features": data.iloc[0].to_dict(),
+        "prediction": prediction,
+        "result": result
+    }
+
+    logger.info(json.dumps(log_entry))
 
     return {
-        "prediction": int(prediction),
-        "result": "PASS" if prediction == 1 else "FAIL"
+        "prediction": prediction,
+        "result": result
     }
