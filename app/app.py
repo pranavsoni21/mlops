@@ -3,6 +3,8 @@ import mlflow.sklearn
 import pandas as pd
 import os
 import time
+import logging
+import json
 
 from mlflow.tracking import MlflowClient
 from datetime import datetime, timezone
@@ -12,6 +14,9 @@ from prometheus_client import Counter, Histogram, make_asgi_app
 
 
 app = FastAPI(title="Student Pass Prediction API")
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("prediction-api")
 
 
 # Total successful predictions, grouped by result
