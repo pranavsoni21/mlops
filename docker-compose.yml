@@ -1,12 +1,22 @@
 services:
+    grafana:
+        container_name: grafana-container
+        image: grafana/grafana:13.1.1
+        ports:
+            - "3000:3000"
+        volumes:
+            - "grafana_data:/var/lib/grafana"
 
+        networks:
+            - mlops_network
+        
     prometheus:
         container_name: prom-container
         image: prom/prometheus:latest
         ports:
             - "9090:9090"
         volumes:
-            - "prom_data:/var/lib/prometheus"
+            - "prom_data:/prometheus"
             - "./prometheus.yml:/etc/prometheus/prometheus.yml"
 
         networks:
